@@ -9,7 +9,7 @@
       "ghcr.io/devcontainers/features/common-utils:2": {
         "configureZshAsDefaultShell": true
       },
-      "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+      // "ghcr.io/devcontainers/features/docker-in-docker:2": {},
       "ghcr.io/devcontainers/features/git:1": {},
       "ghcr.io/devcontainers/features/git-lfs:1": {
         "autoPull": false
@@ -23,7 +23,7 @@
       "../features/nvidia": {"GPU" : "false"}
     },
 
-  "postCreateCommand": "scripts/setup_dev.sh",
+  "postCreateCommand": "chmod +x scripts/* && scripts/setup_dev.sh",
 
   "forwardPorts": [],
 

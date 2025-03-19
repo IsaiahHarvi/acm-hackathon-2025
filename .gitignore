@@ -2,7 +2,8 @@
 
 # Python stuff
 __pycache__/
-
+acm_hackathon_2025.egg-info/
+.ruff_cache/
 
 # Logs
 logs
