@@ -1,0 +1,4 @@
+icecream
+fastapi[standard]
+isort
+ruff
