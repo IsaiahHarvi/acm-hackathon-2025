@@ -17,16 +17,8 @@ import pytz
 from metpy.plots import USCOUNTIES
 from pyart.core import Radar
 
+from services.collector.utils import get_postgres_connection
 
-def get_postgres_connection():
-    conn = psycopg2.connect(
-        host=os.getenv("PG_HOST", "localhost"),
-        database=os.getenv("PG_DATABASE", "weather_db"),
-        user=os.getenv("PG_USER", "admin"),
-        password=os.getenv("PG_PASSWORD", "password"),
-        port=os.getenv("PG_PORT", "5432")
-    )
-    return conn
 
 def download_scans(radar_id, start, end, temp_dir):
     conn = nexradaws.NexradAwsInterface()
@@ -35,19 +27,23 @@ def download_scans(radar_id, start, end, temp_dir):
         print("No scans available for the given time range and radar ID.")
         return []
     print(f"There are {len(scans)} scans available between {start} and {end}\n")
-    print(scans[0:len(scans)//4])
+    print(scans[0 : len(scans) // 4])
     results = conn.download(scans, temp_dir, threads=os.cpu_count())
     return results
+
 
 def load_and_convert(url, start, end):
     df = pd.read_csv(url)
     df["datetime"] = pd.to_datetime(df.date + " " + df.time)
     df.set_index("datetime", inplace=True)
-    df.index = df.index.tz_localize("Etc/GMT+6", ambiguous="NaT", nonexistent="shift_forward").tz_convert("UTC")
+    df.index = df.index.tz_localize(
+        "Etc/GMT+6", ambiguous="NaT", nonexistent="shift_forward"
+    ).tz_convert("UTC")
     df.sort_index(inplace=True)
     start_str = (start - pd.Timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M")
     end_str = (end + pd.Timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M")
     return df[start_str:end_str]
+
 
 def load_severe_reports(year, start, end):
     year_str = str(year)
@@ -62,11 +58,13 @@ def load_severe_reports(year, start, end):
 def store_scan_in_postgres(scan, radar, radar_id):
     scan_time = pd.to_datetime(scan.filename[4:17], format="%Y%m%d_%H%M").tz_localize("UTC")
 
-    reflectivity_data = radar.fields["reflectivity"]["data"][0]
-    reflectivity_list = reflectivity_data.tolist()
+    # Use the full 2D reflectivity array (n_rays x n_gates)
+    reflectivity_data = radar.fields["reflectivity"]["data"]
+    rows, cols = reflectivity_data.shape
+    reflectivity_grid = reflectivity_data.tolist()
 
+    # Get gate latitude and longitude arrays for sweep 0
     lats, lons, alts = radar.get_gate_lat_lon_alt(sweep=0)
-
     lats_sweep = lats[0]
     lons_sweep = lons[0]
     min_lon_val = float(lons_sweep.min())
@@ -75,7 +73,9 @@ def store_scan_in_postgres(scan, radar, radar_id):
     max_lat_val = float(lats_sweep.max())
 
     grid_data = {
-        "reflectivity": reflectivity_list,
+        "reflectivity": reflectivity_grid,
+        "rows": rows,
+        "cols": cols,
         "min_lon": min_lon_val,
         "max_lon": max_lon_val,
         "min_lat": min_lat_val,
@@ -88,13 +88,22 @@ def store_scan_in_postgres(scan, radar, radar_id):
     INSERT INTO radar_scans (radar_id, scan_time, grid_data, min_lon, max_lon, min_lat, max_lat)
     VALUES (%s, %s, %s, %s, %s, %s, %s)
     """
-    cur.execute(insert_sql, (radar_id, scan_time, json.dumps(grid_data),
-                               min_lon_val, max_lon_val, min_lat_val, max_lat_val))
+    cur.execute(
+        insert_sql,
+        (
+            radar_id,
+            scan_time,
+            json.dumps(grid_data),
+            min_lon_val,
+            max_lon_val,
+            min_lat_val,
+            max_lat_val,
+        ),
+    )
     conn.commit()
     cur.close()
     conn.close()
-    print("  Stored in Postgres.", end='\n\n')
-
+    print(f"Stored scan {scan.filename} in Postgres.")
 
 
 def main(radar_id="KDVN"):
@@ -117,6 +126,7 @@ def main(radar_id="KDVN"):
         print(f"Processing scan: {scan.filename}")
         radar = scan.open_pyart()
         store_scan_in_postgres(scan, radar, radar_id)
+
 
 if __name__ == "__main__":
     main()

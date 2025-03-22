@@ -1,22 +1,12 @@
 #!/usr/bin/env python3
 import json
-import os
 
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
-import psycopg2
 
+from services.collector.utils import get_postgres_connection
 
-def get_postgres_connection():
-    conn = psycopg2.connect(
-        host=os.getenv("PG_HOST", "localhost"),
-        database=os.getenv("PG_DATABASE", "weather_db"),
-        user=os.getenv("PG_USER", "admin"),
-        password=os.getenv("PG_PASSWORD", "password"),
-        port=os.getenv("PG_PORT", "5432")
-    )
-    return conn
 
 def query_scans():
     """
@@ -34,6 +24,7 @@ def query_scans():
     conn.close()
     return rows
 
+
 def plot_scan_from_db(scan):
     radar_id, scan_time, grid_data_json, min_lon, max_lon, min_lat, max_lat = scan
     grid_data = json.loads(grid_data_json)
@@ -43,21 +34,22 @@ def plot_scan_from_db(scan):
         refl_array = refl_array.reshape(1, -1)
 
     projection = ccrs.PlateCarree()
-    fig, ax = plt.subplots(figsize=(10, 8), subplot_kw={'projection': projection})
+    fig, ax = plt.subplots(figsize=(10, 8), subplot_kw={"projection": projection})
     ax.set_extent([min_lon, max_lon, min_lat, max_lat])
 
     im = ax.imshow(
         refl_array,
-        origin='upper',
+        origin="upper",
         extent=[min_lon, max_lon, min_lat, max_lat],
-        cmap='HomeyerRainbow',
+        cmap="HomeyerRainbow",
         vmin=-7.5,
         vmax=65,
-        transform=ccrs.PlateCarree()
+        transform=ccrs.PlateCarree(),
     )
-    plt.colorbar(im, ax=ax, orientation='horizontal', pad=0.05)
+    plt.colorbar(im, ax=ax, orientation="horizontal", pad=0.05)
     ax.set_title(f"Radar {radar_id} Reflectivity at {scan_time}")
     plt.show()
+
 
 def main():
     scans = query_scans()
@@ -66,6 +58,7 @@ def main():
         return
     first_scan = scans[0]
     plot_scan_from_db(first_scan)
+
 
 if __name__ == "__main__":
     main()
