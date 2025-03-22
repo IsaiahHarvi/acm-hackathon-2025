@@ -9,9 +9,6 @@ from services.collector.utils import get_postgres_connection
 
 
 def query_scans():
-    """
-    Query the radar_scans table for all stored scans.
-    """
     conn = get_postgres_connection()
     cur = conn.cursor()
     cur.execute("""
