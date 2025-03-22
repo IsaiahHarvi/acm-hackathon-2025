@@ -1,0 +1,3 @@
+include:
+  # - postgres/compose.yml
+  - scans/compose.yml

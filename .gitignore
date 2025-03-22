@@ -2,6 +2,7 @@
 tornet/
 *.png
 data/TorNet
+sample_data.json
 
 # Python stuff
 __pycache__/
