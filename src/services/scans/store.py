@@ -17,7 +17,16 @@ import pytz
 from metpy.plots import USCOUNTIES
 from pyart.core import Radar
 
-from services.collector.utils import get_postgres_connection
+
+def get_postgres_connection():
+    conn = psycopg2.connect(
+        host=os.getenv("PG_HOST", "localhost"),
+        database=os.getenv("PG_DATABASE", "weather_db"),
+        user=os.getenv("PG_USER", "admin"),
+        password=os.getenv("PG_PASSWORD", "password"),
+        port=os.getenv("PG_PORT", "5432"),
+    )
+    return conn
 
 
 def download_scans(radar_id, start, end, temp_dir):
@@ -61,13 +70,11 @@ def store_scan_in_postgres(scan, radar, radar_id):
         "UTC"
     )
 
-    # Use the full 2D reflectivity array (n_rays x n_gates)
-    reflectivity_data = radar.fields["reflectivity"]["data"]
-    rows, cols = reflectivity_data.shape
-    reflectivity_grid = reflectivity_data.tolist()
+    reflectivity_data = radar.fields["reflectivity"]["data"][0]
+    reflectivity_list = reflectivity_data.tolist()
 
-    # Get gate latitude and longitude arrays for sweep 0
     lats, lons, alts = radar.get_gate_lat_lon_alt(sweep=0)
+
     lats_sweep = lats[0]
     lons_sweep = lons[0]
     min_lon_val = float(lons_sweep.min())
@@ -76,9 +83,7 @@ def store_scan_in_postgres(scan, radar, radar_id):
     max_lat_val = float(lats_sweep.max())
 
     grid_data = {
-        "reflectivity": reflectivity_grid,
-        "rows": rows,
-        "cols": cols,
+        "reflectivity": reflectivity_list,
         "min_lon": min_lon_val,
         "max_lon": max_lon_val,
         "min_lat": min_lat_val,
@@ -106,7 +111,7 @@ def store_scan_in_postgres(scan, radar, radar_id):
     conn.commit()
     cur.close()
     conn.close()
-    print(f"Stored scan {scan.filename} in Postgres.")
+    print("  Stored in Postgres.", end="\n\n")
 
 
 def main(radar_id="KDVN"):

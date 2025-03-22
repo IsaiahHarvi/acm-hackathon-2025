@@ -1,0 +1,9 @@
+services:
+  scans:
+    build:
+      context: ../../
+      dockerfile: deploy/scans/Dockerfile
+    ports:
+      - "5171:5171"
+    volumes:
+      - ./nexrad_cache:/app/nexrad_cache

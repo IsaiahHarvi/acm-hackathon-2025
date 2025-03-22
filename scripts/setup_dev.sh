@@ -29,4 +29,4 @@ fi
 
 uv pip install -e .
 
-bash ./scripts/start_db.sh
+# bash ./scripts/start_db.sh
