@@ -36,7 +36,7 @@
 				"charliermarsh.ruff",
 				"esbenp.prettier-vscode",
 				"dbaeumer.vscode-eslint",
-				"oven.bun-vscode",
+				"svelte.svelte-vscode",
 				"bradlc.vscode-tailwindcss"
 			]
 		}
