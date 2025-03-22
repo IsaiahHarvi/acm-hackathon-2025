@@ -1,9 +1,7 @@
 .DS_Store
-tornet/
-*.png
-data/TorNet
 data/TorNet
 tornet
+data/TorNet
 
 # Python stuff
 __pycache__/

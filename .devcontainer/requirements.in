@@ -1,6 +1,11 @@
 icecream
 isort
 ruff
+numpy
+pandas
+matplotlib
+torch
+torchvision
 requests
 cartopy
 nexradaws
