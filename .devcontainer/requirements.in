@@ -2,3 +2,8 @@ icecream
 fastapi[standard]
 isort
 ruff
+numpy
+pandas
+matplotlib
+torch
+torchvision
