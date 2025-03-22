@@ -26,8 +26,9 @@ def download_scans(radar_id, start, end, temp_dir):
     if scans is None:
         print("No scans available for the given time range and radar ID.")
         return []
-    print(f"There are {len(scans)} scans available between {start} and {end}\n")
-    print(scans[0 : len(scans) // 4])
+    print(
+        f"There are {len(scans)} scans available between {start} and {end}\n")
+    print(scans[0: len(scans) // 4])
     results = conn.download(scans, temp_dir, threads=os.cpu_count())
     return results
 
@@ -55,8 +56,10 @@ def load_severe_reports(year, start, end):
     hail_rpts = load_and_convert(hail_url, start, end)
     return wind_rpts, tor_rpts, hail_rpts
 
+
 def store_scan_in_postgres(scan, radar, radar_id):
-    scan_time = pd.to_datetime(scan.filename[4:17], format="%Y%m%d_%H%M").tz_localize("UTC")
+    scan_time = pd.to_datetime(
+        scan.filename[4:17], format="%Y%m%d_%H%M").tz_localize("UTC")
 
     # Use the full 2D reflectivity array (n_rays x n_gates)
     reflectivity_data = radar.fields["reflectivity"]["data"]
@@ -116,7 +119,7 @@ def main(radar_id="KDVN"):
     temp_location = tempfile.mkdtemp()
     print(f"Using temporary directory: {temp_location}")
 
-    scans = download_scans(radar_id, start, end, temp_location)
+    scans = download_scans(radar_id, start, end, './')
 
     # wind_rpts, tor_rpts, hail_rpts = load_severe_reports(start.year, start, end)
 
