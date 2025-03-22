@@ -1,1 +1,1 @@
-vim tmux sudo libcairo2-dev libpango1.0-dev libpng-dev libpixman-1-dev
+vim tmux

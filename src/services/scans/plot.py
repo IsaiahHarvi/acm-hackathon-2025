@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
+
 import json
+import os
 
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
+import psycopg2
 
-from services.collector.utils import get_postgres_connection
+
+def get_postgres_connection():
+    conn = psycopg2.connect(
+        host=os.getenv("PG_HOST", "localhost"),
+        database=os.getenv("PG_DATABASE", "weather_db"),
+        user=os.getenv("PG_USER", "admin"),
+        password=os.getenv("PG_PASSWORD", "password"),
+        port=os.getenv("PG_PORT", "5432"),
+    )
+    return conn
 
 
 def query_scans():
