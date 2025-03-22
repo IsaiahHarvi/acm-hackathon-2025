@@ -1,0 +1,7 @@
+services:
+  gui:
+    build:
+      context: ../../
+      dockerfile: deploy/gui/Dockerfile
+    ports:
+      - "5173:5173"

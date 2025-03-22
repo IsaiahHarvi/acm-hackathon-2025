@@ -1,3 +1,4 @@
 include:
   # - postgres/compose.yml
   - scans/compose.yml
+  - gui/compose.yml
