@@ -1,4 +1,10 @@
 icecream
-fastapi[standard]
 isort
 ruff
+requests
+cartopy
+nexradaws
+arm_pyart
+metpy
+geopy
+psycopg2-binary
