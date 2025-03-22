@@ -145,6 +145,8 @@ pooch==1.8.2
     #   arm-pyart
     #   metpy
     #   open-radar-data
+psycopg2-binary==2.9.10
+    # via -r .devcontainer/requirements.in
 pygments==2.19.1
     # via icecream
 pyparsing==3.2.1
