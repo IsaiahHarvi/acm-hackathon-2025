@@ -25,7 +25,7 @@
 
   "postCreateCommand": "scripts/setup_dev.sh",
 
-  "forwardPorts": [],
+  "forwardPorts": [5173],
 
   "customizations": {
     "vscode": {

@@ -1,7 +1,12 @@
 icecream
-fastapi[standard]
 isort
 ruff
+requests
+cartopy
+nexradaws
+arm_pyart
+metpy
+geopy
 numpy
 pandas
 matplotlib
