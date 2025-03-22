@@ -3,6 +3,7 @@
 import json
 import os
 import tempfile
+import shutil
 from datetime import datetime, timedelta
 
 import cartopy.crs as ccrs
@@ -17,6 +18,8 @@ import pytz
 from metpy.plots import USCOUNTIES
 from pyart.core import Radar
 
+# Maximum cache size: 50GB
+MAX_CACHE_SIZE = 50 * 1024 * 1024 * 1024  # 50GB in bytes
 
 def get_postgres_connection():
     conn = psycopg2.connect(
@@ -28,15 +31,54 @@ def get_postgres_connection():
     )
     return conn
 
-def download_scans(radar_id, start, end, temp_dir):
+def get_directory_size(directory):
+    total_size = 0
+    for dirpath, _, filenames in os.walk(directory):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            if os.path.isfile(fp):
+                total_size += os.path.getsize(fp)
+    return total_size
+
+def manage_cache(cache_dir, max_size):
+    """Remove oldest files from cache_dir until the total size is under max_size."""
+    current_size = get_directory_size(cache_dir)
+    if current_size <= max_size:
+        return
+
+    # List files with their modification times
+    files = []
+    for filename in os.listdir(cache_dir):
+        filepath = os.path.join(cache_dir, filename)
+        if os.path.isfile(filepath):
+            mtime = os.path.getmtime(filepath)
+            files.append((mtime, filepath))
+    # Sort files by modification time (oldest first)
+    files.sort(key=lambda x: x[0])
+
+    while current_size > max_size and files:
+        oldest_file = files.pop(0)[1]
+        try:
+            file_size = os.path.getsize(oldest_file)
+            os.remove(oldest_file)
+            print(f"Removed cached file: {oldest_file} ({file_size} bytes)")
+            current_size -= file_size
+        except Exception as e:
+            print(f"Error removing file {oldest_file}: {e}")
+
+def download_scans(radar_id, start, end, cache_dir):
     conn = nexradaws.NexradAwsInterface()
     scans = conn.get_avail_scans_in_range(start, end, radar_id)
     if scans is None:
         print("No scans available for the given time range and radar ID.")
         return []
     print(f"There are {len(scans)} scans available between {start} and {end}\n")
-    print(scans[0:len(scans)//4])
-    results = conn.download(scans, temp_dir, threads=os.cpu_count())
+
+    # Ensure cache is within limits before download
+    manage_cache(cache_dir, MAX_CACHE_SIZE)
+    
+    # Download scans to cache_dir; this will save files into your persistent cache
+    results = conn.download(scans, cache_dir, threads=os.cpu_count())
     return results
 
 def load_and_convert(url, start, end):
@@ -66,7 +108,6 @@ def store_scan_in_postgres(scan, radar, radar_id):
     reflectivity_list = reflectivity_data.tolist()
 
     lats, lons, alts = radar.get_gate_lat_lon_alt(sweep=0)
-
     lats_sweep = lats[0]
     lons_sweep = lons[0]
     min_lon_val = float(lons_sweep.min())
@@ -95,20 +136,19 @@ def store_scan_in_postgres(scan, radar, radar_id):
     conn.close()
     print("  Stored in Postgres.", end='\n\n')
 
-
-
 def main(radar_id="KDVN"):
     start = pd.Timestamp(2020, 8, 10, 16, 30).tz_localize("UTC")
     end = pd.Timestamp(2020, 8, 10, 21, 0).tz_localize("UTC")
-    # current_time = pd.Timestamp.now('UTC')
-    # start = current_time - pd.Timedelta(minutes=15)
-    # end = current_time + pd.Timedelta(minutes=15)
 
-    temp_location = tempfile.mkdtemp()
-    print(f"Using temporary directory: {temp_location}")
+    # Use a persistent cache directory.
+    # Set CACHE_DIR in your environment or use the default path.
+    cache_dir = os.getenv("CACHE_DIR", "/var/cache/radar_data")
+    os.makedirs(cache_dir, exist_ok=True)
+    print(f"Using cache directory: {cache_dir}")
 
-    scans = download_scans(radar_id, start, end, temp_location)
+    scans = download_scans(radar_id, start, end, cache_dir)
 
+    # Optionally, load severe reports
     # wind_rpts, tor_rpts, hail_rpts = load_severe_reports(start.year, start, end)
 
     for i, scan in enumerate(scans.iter_success(), start=1):
